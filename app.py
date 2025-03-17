@@ -42,24 +42,30 @@ def extract_features(image_path):
     return np.concatenate((deep_features, texture_features))
 
 # Load Dataset
-def load_dataset(dataset_folder):
+def load_dataset(uploaded_files):
     global index, image_paths
     image_paths = []
     feature_vectors = []
 
-    for file_name in os.listdir(dataset_folder):
-        if file_name.lower().endswith((".jpg", ".png", ".jpeg", ".webp")):
-            path = os.path.join(dataset_folder, file_name)
-            features = extract_features(path)
-            image_paths.append(path)
-            feature_vectors.append(features)
+    dataset_folder = "temp_dataset"
+    os.makedirs(dataset_folder, exist_ok=True)
 
-    feature_vectors = np.array(feature_vectors, dtype='float32')
-    
-    # Build FAISS Index
-    dimension = feature_vectors.shape[1]
-    index = faiss.IndexFlatIP(dimension)
-    index.add(feature_vectors)
+    for uploaded_file in uploaded_files:
+        file_path = os.path.join(dataset_folder, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        # Extract features and store them
+        features = extract_features(file_path)
+        image_paths.append(file_path)
+        feature_vectors.append(features)
+
+    if feature_vectors:
+        feature_vectors = np.array(feature_vectors, dtype="float32")
+        dimension = feature_vectors.shape[1]
+        index = faiss.IndexFlatIP(dimension)
+        index.add(feature_vectors)
+        st.success("✅ Dataset loaded successfully!")
 
 # Search Image
 def search_image(query_image):
@@ -80,17 +86,21 @@ st.title("🔎 Similar Image Search")
 st.write("Upload an image and search for similar images in the dataset.")
 
 # Load Dataset Section
-dataset_folder = st.text_input("📁 Enter path to dataset folder:")
+uploaded_files = st.file_uploader(
+    "📂 Drag and drop your dataset files here (JPG, JPEG, PNG, WEBP)", 
+    accept_multiple_files=True, 
+    type=["jpg", "jpeg", "png", "webp"]
+)
 
-if st.button("📂 Load Dataset"):
-    if os.path.exists(dataset_folder):
-        load_dataset(dataset_folder)
-        st.success("✅ Dataset loaded successfully!")
-    else:
-        st.error("⚠️ Invalid path. Please check the dataset folder path.")
+if uploaded_files:
+    if st.button("📂 Load Dataset"):
+        load_dataset(uploaded_files)
 
 # Search Image Section
-uploaded_file = st.file_uploader("🔎 Upload an image to search", type=["jpg", "jpeg", "png", "webp"])
+uploaded_file = st.file_uploader(
+    "🔎 Upload an image to search", 
+    type=["jpg", "jpeg", "png", "webp"]
+)
 
 if uploaded_file is not None:
     # Save the uploaded file temporarily
