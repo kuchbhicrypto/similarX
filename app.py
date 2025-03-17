@@ -130,13 +130,14 @@ if uploaded_file is not None:
             # Show similarity score
             st.write(f"**Similarity Score:** {similarity_score:.2f}%")
             st.progress(similarity_score / 100)
+'''
+
 
 import streamlit as st
 
 # ✅ Set page config FIRST before any Streamlit command
 st.set_page_config(page_title="🔎 Similar Image Search", layout="wide")
 
-'''
 import os
 import numpy as np
 import cv2
