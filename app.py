@@ -23,9 +23,11 @@ def load_model():
 
 model = load_model()
 
-# Global Variables
-index = None
-image_paths = []
+# Initialize session state
+if "index" not in st.session_state:
+    st.session_state.index = None
+if "image_paths" not in st.session_state:
+    st.session_state.image_paths = []
 
 # Feature Extraction
 def extract_features(image_path):
@@ -43,7 +45,6 @@ def extract_features(image_path):
 
 # Load Dataset
 def load_dataset(uploaded_files):
-    global index, image_paths
     image_paths = []
     feature_vectors = []
 
@@ -65,18 +66,22 @@ def load_dataset(uploaded_files):
         dimension = feature_vectors.shape[1]
         index = faiss.IndexFlatIP(dimension)
         index.add(feature_vectors)
+
+        # ✅ Store index and paths in session state
+        st.session_state.index = index
+        st.session_state.image_paths = image_paths
         st.success("✅ Dataset loaded successfully!")
 
 # Search Image
 def search_image(query_image):
-    if index is None:
+    if st.session_state.index is None or not st.session_state.image_paths:
         st.error("⚠️ Load the dataset first!")
         return None, 0
     
     query_features = extract_features(query_image)
-    D, I = index.search(np.array([query_features]), k=1)
+    D, I = st.session_state.index.search(np.array([query_features]), k=1)
     
-    matched_path = image_paths[I[0][0]]
+    matched_path = st.session_state.image_paths[I[0][0]]
     similarity_score = D[0][0] * 100
     
     return matched_path, similarity_score
