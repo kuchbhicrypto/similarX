@@ -1,3 +1,8 @@
+import streamlit as st
+
+# ✅ Set page config FIRST before imports
+st.set_page_config(page_title="🔎 Similar Image Search", layout="wide")
+
 import os
 import numpy as np
 import cv2
@@ -8,10 +13,6 @@ from tensorflow.keras.models import Model
 import faiss
 from skimage.feature import hog
 from PIL import Image
-import streamlit as st
-
-# ✅ Set page config at the top BEFORE any other st commands
-st.set_page_config(page_title="🔎 Similar Image Search", layout="wide")
 
 @st.cache_resource
 def load_model():
@@ -20,7 +21,6 @@ def load_model():
     return model
 
 model = load_model()
-
 
 # Load VGG19 Model
 @st.cache_resource
