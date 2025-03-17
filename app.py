@@ -1,6 +1,6 @@
 import streamlit as st
 
-# ✅ Set page config FIRST before imports
+# ✅ Set page config FIRST before any Streamlit command
 st.set_page_config(page_title="🔎 Similar Image Search", layout="wide")
 
 import os
@@ -13,14 +13,6 @@ from tensorflow.keras.models import Model
 import faiss
 from skimage.feature import hog
 from PIL import Image
-
-@st.cache_resource
-def load_model():
-    base_model = VGG19(weights='imagenet', include_top=False, pooling='avg')
-    model = Model(inputs=base_model.input, outputs=base_model.output)
-    return model
-
-model = load_model()
 
 # Load VGG19 Model
 @st.cache_resource
@@ -84,8 +76,6 @@ def search_image(query_image):
     return matched_path, similarity_score
 
 # Streamlit App
-st.set_page_config(page_title="🔎 Similar Image Search", layout="wide")
-
 st.title("🔎 Similar Image Search")
 st.write("Upload an image and search for similar images in the dataset.")
 
@@ -123,4 +113,3 @@ if uploaded_file is not None:
             # Show similarity score
             st.write(f"**Similarity Score:** {similarity_score:.2f}%")
             st.progress(similarity_score / 100)
-
