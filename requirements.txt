@@ -1,0 +1,6 @@
+streamlit
+tensorflow
+opencv-python-headless
+faiss-cpu
+scikit-image
+Pillow
