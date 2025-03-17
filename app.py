@@ -10,6 +10,18 @@ from skimage.feature import hog
 from PIL import Image
 import streamlit as st
 
+# ✅ Set page config at the top BEFORE any other st commands
+st.set_page_config(page_title="🔎 Similar Image Search", layout="wide")
+
+@st.cache_resource
+def load_model():
+    base_model = VGG19(weights='imagenet', include_top=False, pooling='avg')
+    model = Model(inputs=base_model.input, outputs=base_model.output)
+    return model
+
+model = load_model()
+
+
 # Load VGG19 Model
 @st.cache_resource
 def load_model():
