@@ -151,7 +151,7 @@ from PIL import Image
 # Load VGG19 Model
 @st.cache_resource
 def load_model():
-    base_model = VGG19(weights='imagenet', include_top=False, pooling='avg')
+    base_model = VGG19(weights="imagenet", include_top=False, pooling="avg")
     model = Model(inputs=base_model.input, outputs=base_model.output)
     return model
 
@@ -170,28 +170,31 @@ def extract_features(image_path):
     img = np.expand_dims(img, axis=0)
     img = preprocess_input(img)
     deep_features = model.predict(img).flatten()
-    
+
     gray_img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2GRAY)
     gray_img = cv2.resize(gray_img, (128, 128))
-    texture_features = hog(gray_img, pixels_per_cell=(8, 8), cells_per_block=(2, 2), feature_vector=True)
+    texture_features = hog(
+        gray_img, pixels_per_cell=(8, 8), cells_per_block=(2, 2), feature_vector=True
+    )
 
     return np.concatenate((deep_features, texture_features))
 
-# Load Dataset from Folder
-def load_dataset_from_folder(folder_path):
+# Load Dataset from Drag & Drop
+def load_dataset_from_files(files):
     image_paths = []
     feature_vectors = []
 
-    if not os.path.exists(folder_path):
-        st.error("⚠️ Invalid folder path. Please check the path and try again.")
-        return
+    os.makedirs("temp_dataset", exist_ok=True)
 
-    for file_name in os.listdir(folder_path):
-        if file_name.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
-            file_path = os.path.join(folder_path, file_name)
-            features = extract_features(file_path)
-            image_paths.append(file_path)
-            feature_vectors.append(features)
+    for uploaded_file in files:
+        file_path = os.path.join("temp_dataset", uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        # Extract features
+        features = extract_features(file_path)
+        image_paths.append(file_path)
+        feature_vectors.append(features)
 
     if feature_vectors:
         feature_vectors = np.array(feature_vectors, dtype="float32")
@@ -202,7 +205,7 @@ def load_dataset_from_folder(folder_path):
         # ✅ Store index and paths in session state
         st.session_state.index = index
         st.session_state.image_paths = image_paths
-        st.success(f"✅ {len(image_paths)} images loaded successfully from folder!")
+        st.success(f"✅ {len(image_paths)} images loaded successfully!")
 
 # Search Image
 def search_image(query_image):
@@ -220,19 +223,22 @@ def search_image(query_image):
 
 # Streamlit App
 st.title("🔎 Similar Image Search")
-st.write("Upload an image and search for similar images in the dataset.")
+st.write("Upload images and search for similar ones.")
 
-# ✅ Load Dataset Section (Folder)
-dataset_folder = st.text_input("📂 Enter path to dataset folder:")
-if st.button("📂 Load Dataset"):
-    if dataset_folder:
-        load_dataset_from_folder(dataset_folder)
-    else:
-        st.error("⚠️ Please enter a valid folder path.")
+# ✅ Drag & Drop Multiple Files Section
+uploaded_files = st.file_uploader(
+    "📂 Drag and drop images here to load dataset",
+    type=["jpg", "jpeg", "png", "webp"],
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    if st.button("📂 Load Dataset"):
+        load_dataset_from_files(uploaded_files)
 
 # ✅ Search Image Section
 uploaded_file = st.file_uploader(
-    "🔎 Upload an image to search", 
+    "🔎 Upload an image to search",
     type=["jpg", "jpeg", "png", "webp"]
 )
 
