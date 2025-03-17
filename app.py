@@ -264,8 +264,6 @@ if uploaded_file is not None:
             st.write(f"**Similarity Score:** {similarity_score:.2f}%")
             st.progress(similarity_score / 100)  # ✅ Value between 0-1
 '''
-
-
 import streamlit as st
 
 # ✅ Set page config FIRST before any Streamlit command
