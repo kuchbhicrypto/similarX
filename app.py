@@ -264,6 +264,7 @@ if uploaded_file is not None:
             st.write(f"**Similarity Score:** {similarity_score:.2f}%")
             st.progress(similarity_score / 100)  # ✅ Value between 0-1
 '''
+
 import streamlit as st
 
 # ✅ Set page config FIRST before any Streamlit command
@@ -272,6 +273,7 @@ st.set_page_config(page_title="🔎 Similar Image Search", layout="wide")
 import os
 import numpy as np
 import cv2
+import tensorflow as tf
 from tensorflow.keras.applications import VGG19
 from tensorflow.keras.applications.vgg19 import preprocess_input
 from tensorflow.keras.models import Model
@@ -279,7 +281,7 @@ import faiss
 from skimage.feature import hog
 from PIL import Image
 
-# ✅ Load VGG19 Model (Fine-tuned)
+# ✅ Load VGG19 Model
 @st.cache_resource
 def load_model():
     base_model = VGG19(weights="imagenet", include_top=False, pooling="avg")
@@ -294,10 +296,6 @@ if "index" not in st.session_state:
 if "image_paths" not in st.session_state:
     st.session_state.image_paths = []
 
-# ✅ Settings
-TEXTURE_WEIGHT = 1.8  # Increase texture weight to improve design-based similarity
-SIMILARITY_THRESHOLD = 80.0  # Lower threshold for better cropped image matching
-
 # ✅ Feature Extraction
 def extract_features(image_path):
     try:
@@ -308,17 +306,17 @@ def extract_features(image_path):
         img = np.expand_dims(img, axis=0)
         img = preprocess_input(img)
         deep_features = model.predict(img).flatten()
-        deep_features /= np.linalg.norm(deep_features)  # Normalize
+        deep_features /= np.linalg.norm(deep_features)
 
         gray_img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2GRAY)
         gray_img = cv2.resize(gray_img, (128, 128))
         texture_features = hog(
             gray_img, pixels_per_cell=(8, 8), cells_per_block=(2, 2), feature_vector=True
         )
-        texture_features /= np.linalg.norm(texture_features)  # Normalize
+        texture_features /= np.linalg.norm(texture_features)
 
-        # ✅ Combine deep and texture features with higher weight on texture
-        combined_features = np.concatenate((deep_features, TEXTURE_WEIGHT * texture_features))
+        # ✅ Combine deep and texture features
+        combined_features = np.concatenate((deep_features, 1.8 * texture_features))
         return combined_features
     except Exception as e:
         st.error(f"❌ Error in feature extraction: {e}")
@@ -335,7 +333,7 @@ def load_dataset_from_files(files):
         file_path = os.path.join("temp_dataset", uploaded_file.name)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        
+
         # ✅ Extract features
         features = extract_features(file_path)
         if features is not None:
@@ -345,10 +343,9 @@ def load_dataset_from_files(files):
     if feature_vectors:
         feature_vectors = np.array(feature_vectors, dtype="float32")
         dimension = feature_vectors.shape[1]
-        index = faiss.IndexFlatL2(dimension)  # ✅ Use L2 for better pattern-based search
+        index = faiss.IndexFlatL2(dimension)
         index.add(feature_vectors)
 
-        # ✅ Store index and paths in session state
         st.session_state.index = index
         st.session_state.image_paths = image_paths
         st.success(f"✅ {len(image_paths)} images loaded successfully!")
@@ -370,10 +367,9 @@ def search_image(query_image):
     similarity_score = (1 - (D[0][0] ** 0.5)) * 100
     similarity_score = round(similarity_score, 2)
 
-    if similarity_score < SIMILARITY_THRESHOLD:
+    if similarity_score < 80:
         return None, similarity_score
     
-    # ✅ Ensure valid index before returning path
     if I[0][0] < len(st.session_state.image_paths):
         matched_path = st.session_state.image_paths[I[0][0]]
         if os.path.exists(matched_path):
@@ -403,13 +399,11 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    # ✅ Save the uploaded file temporarily
     query_image_path = os.path.join("temp", uploaded_file.name)
     os.makedirs("temp", exist_ok=True)
     with open(query_image_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     
-    # ✅ Display the uploaded image
     st.image(uploaded_file, caption="Query Image", width=200)
     
     if st.button("🔎 Search"):
@@ -417,11 +411,8 @@ if uploaded_file is not None:
         
         if matched_path:
             try:
-                # ✅ Display matched image
                 matched_image = Image.open(matched_path)
                 st.image(matched_image, caption=f"Matched Image ({similarity_score:.2f}% Similar)", width=200)
-                
-                # ✅ Display similarity score in percentage
                 st.write(f"**Similarity Score:** {similarity_score:.2f}%")
                 st.progress(min(max(similarity_score / 100, 0), 1))
             except FileNotFoundError:
