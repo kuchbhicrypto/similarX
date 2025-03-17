@@ -217,7 +217,7 @@ def search_image(query_image):
     D, I = st.session_state.index.search(np.array([query_features]), k=1)
     
     matched_path = st.session_state.image_paths[I[0][0]]
-    similarity_score = D[0][0] * 100
+    similarity_score = min(max(D[0][0] * 100, 0), 100)  # Ensure it's between 0-100
     
     return matched_path, similarity_score
 
@@ -260,6 +260,6 @@ if uploaded_file is not None:
             matched_image = Image.open(matched_path)
             st.image(matched_image, caption=f"Matched Image ({similarity_score:.2f}% Similar)", width=200)
             
-            # Show similarity score
+            # ✅ Display similarity score in percentage
             st.write(f"**Similarity Score:** {similarity_score:.2f}%")
-            st.progress(similarity_score / 100)
+            st.progress(similarity_score / 100)  # ✅ Value between 0-1
